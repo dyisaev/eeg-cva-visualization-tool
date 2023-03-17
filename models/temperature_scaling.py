@@ -1,3 +1,4 @@
+# Temperature scaling taken from here: https://github.com/gpleiss/temperature_scaling
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
@@ -54,7 +55,6 @@ class ModelWithTemperature(nn.Module):
         # Calculate NLL and ECE before temperature scaling
         before_temperature_nll = nll_criterion(logits, labels).item()
         before_temperature_ece = ece_criterion(logits, labels).item()
-        print('Before temperature - NLL: %.3f, ECE: %.3f' % (before_temperature_nll, before_temperature_ece))
 
         # Next: optimize the temperature w.r.t. NLL
         optimizer = optim.LBFGS([self.temperature], lr=0.01, max_iter=50)
@@ -69,8 +69,6 @@ class ModelWithTemperature(nn.Module):
         # Calculate NLL and ECE after temperature scaling
         after_temperature_nll = nll_criterion(self.temperature_scale(logits), labels).item()
         after_temperature_ece = ece_criterion(self.temperature_scale(logits), labels).item()
-        print('Optimal temperature: %.3f' % self.temperature.item())
-        print('After temperature - NLL: %.3f, ECE: %.3f' % (after_temperature_nll, after_temperature_ece))
 
         return self
 
@@ -104,10 +102,10 @@ class _ECELoss(nn.Module):
         self.bin_uppers = bin_boundaries[1:]
 
     def forward(self, logits, labels):
-        print('lasda',labels.shape,logits.shape)
+
         softmaxes = torch.squeeze(F.softmax(logits, dim=1))
         confidences, predictions = torch.max(softmaxes, 1)
-        print('congpred', confidences.shape,predictions.shape)
+
         accuracies = predictions.eq(labels[:,1])
 
         ece = torch.zeros(1, device=logits.device)
@@ -152,10 +150,9 @@ class CombinedLoss(nn.Module):
         self.ce = nn.CrossEntropyLoss()
         self.l=l
     def forward(self, logits, labels):
-        #print('lasda',labels.shape,logits.shape)
+
         softmaxes = F.softmax(logits, dim=1)
         confidences, predictions = torch.max(softmaxes, 1)
-        #print('congpred', confidences.shape,predictions.shape)
         accuracies = predictions.eq(labels[:,1])
 
         ece = torch.zeros(1, device=logits.device)

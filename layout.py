@@ -122,7 +122,6 @@ def generate_layout(events):
                                             volume=1,
                                             width='100%',
                                             intervalCurrentTime=500
-                #                            height='100%'
                                             ),
                                             dcc.Store("video-fps", data=30),
                                             dcc.Store("video-duration", data=10*60)]

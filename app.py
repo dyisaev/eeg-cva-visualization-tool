@@ -71,10 +71,6 @@ app.clientside_callback(
     State('video-fps', 'data')]
 )
 
-#
-# app.layout['datafolder-dropdown'].options=[  {'label': f.path , 'value': f.path}   for f in os.scandir('assets/data') if f.is_dir()],
-print(trace_ids)
-
 @app.callback(
     dash.dependencies.Output('video-fps', 'data'),
     [dash.dependencies.Input('datafolder-dropdown', 'value')])
@@ -133,7 +129,6 @@ def active_learning_update(start_labeling,return_to_labeling,al_att,al_inatt,cli
             return '',al_frames_text_state,al_frames_to_label_state,al_labeled_frames_state,al_current_frame_state,None
 
     elif 'al-start-labeling.n_clicks' in callback_context.triggered[0].values():
-        print('start labeling clicked')
         # generate sample.
         # save sample into store
         # output first frame
@@ -142,20 +137,16 @@ def active_learning_update(start_labeling,return_to_labeling,al_att,al_inatt,cli
             return
         else:
             frameNums_to_label=model.generate_al_batch(al_Nbatch)
-            #first_frame_to_label=frameNums_to_label[0]
             filenames_to_label=['assets/labeling/'+''.join(random.choices(string.ascii_letters, k=10))+f'_{frameNum}.jpg' for frameNum in frameNums_to_label]
             frames_to_label=list(zip(frameNums_to_label,filenames_to_label))
             for frameNum,filename in frames_to_label:
                 get_frame_from_video(video_url,frameNum,filename)
             return frames_to_label[0][1],'labeled 0 frames',frames_to_label,[],frames_to_label[0],frames_to_label[0][0]/fps
     elif 'al-att.n_clicks' in callback_context.triggered[0].values():
-        print('attention clicked')
         label=1
     elif 'al-inatt.n_clicks' in callback_context.triggered[0].values():
-        print('inattention clicked')
         label=0
     elif 'al-return-to-labeling.n_clicks' in callback_context.triggered[0].values():
-        print('return to labeling clicked')
         label=-1
     else:
         return
@@ -218,7 +209,6 @@ def save_detections(pred_save_clicked,datafolder_value,fig):
 def load_model (n_clicks,datafolder_value,al_retrain,
         model_filename,current_fig_data,al_labeled_frames,currentTime):
     global model
-    print('datafolder-dropdown updated')
     subj_path=APP_PATH+'/'+datafolder_value
     fps=float(get_video_fps(subj_path+'/video/'+VIDEOFILE_NAME))
     video_duration=float(get_video_duration(subj_path+'/video/'+VIDEOFILE_NAME))
@@ -231,23 +221,19 @@ def load_model (n_clicks,datafolder_value,al_retrain,
             output = 'Model cannot be loaded'
     elif 'al-retrain.n_clicks' in callback_context.triggered[0].values():
         if not (model is None):
-            print('al_labeled_frames:',al_labeled_frames)
             model.label(al_labeled_frames)
             model.train()
     graph_fig=pa.deserialize(create_traces_annot(subj_path,fps,video_duration,model=model))
-    print('uirevision:',graph_fig['layout']['uirevision'])
     if graph_fig is None or len(graph_fig)==0 or graph_fig['data'] is None:
         raise PreventUpdate
     return graph_fig , output 
 
 @cache.memoize()
 def create_traces_annot(subj_path,fps,video_duration,model=None,threshold=0.5,reject_events=[]):
-    print ('Graph-data children')
     graph_data = pa.deserialize(load_data(subj_path,fps,video_duration))
     
     gaze=graph_data['gaze']
     nose=graph_data['nose']
-#    landmarks=graph_data['landmarks']
     headpose=graph_data['headpose']
 
     Nframes=int(video_duration*fps)+1
@@ -275,7 +261,6 @@ def create_traces_annot(subj_path,fps,video_duration,model=None,threshold=0.5,re
     nose_y=np.empty(Nframes)
     nose_x[:]=np.NaN
     nose_y[:]=np.NaN
-    #nose = [x[NOSE_LANDMARK_ID] for x in landmarks['landmarks']] # nose tip is a stable landmark
     nose_x[nose['frame']]=np.array(nose['nosex'])
     nose_y[nose['frame']]=np.array(nose['nosey'])
 
@@ -285,33 +270,32 @@ def create_traces_annot(subj_path,fps,video_duration,model=None,threshold=0.5,re
     fig['layout']['xaxis']['uirevision']=1
 
 
-    fig['data'][trace_ids['gazex']]['x']=frames_axis#[::1000]
-    fig['data'][trace_ids['gazex']]['y']=gazex#[::1000]
+    fig['data'][trace_ids['gazex']]['x']=frames_axis
+    fig['data'][trace_ids['gazex']]['y']=gazex
     fig['data'][trace_ids['gazex']]['name']='Gaze X'
-    fig['data'][trace_ids['gazey']]['x']=frames_axis#[::1000]
-    fig['data'][trace_ids['gazey']]['y']=gazey#[::1000]
+    fig['data'][trace_ids['gazey']]['x']=frames_axis
+    fig['data'][trace_ids['gazey']]['y']=gazey
     fig['data'][trace_ids['gazey']]['name']='Gaze Y'
-#    range_y=[min(np.nanmin(gazex),np.nanmin(gazey)),max(np.nanmax(gazex),np.nanmax(gazey))]
-#    fig['layout']['yaxis']['range']=range_y
-    fig['data'][trace_ids['pitch']]['x']=frames_axis#[::1000]
-    fig['data'][trace_ids['pitch']]['y']=pitch#[::1000]
+
+    fig['data'][trace_ids['pitch']]['x']=frames_axis
+    fig['data'][trace_ids['pitch']]['y']=pitch
     fig['data'][trace_ids['pitch']]['name']='Pitch'
     
-    fig['data'][trace_ids['yaw']]['x']=frames_axis#[::1000]
-    fig['data'][trace_ids['yaw']]['y']=yaw#[::1000]
+    fig['data'][trace_ids['yaw']]['x']=frames_axis
+    fig['data'][trace_ids['yaw']]['y']=yaw
     fig['data'][trace_ids['yaw']]['name']='Yaw'
     
-    fig['data'][trace_ids['roll']]['x']=frames_axis#[::1000]
-    fig['data'][trace_ids['roll']]['y']=roll#[::1000]
+    fig['data'][trace_ids['roll']]['x']=frames_axis
+    fig['data'][trace_ids['roll']]['y']=roll
     fig['data'][trace_ids['roll']]['name']='Roll'
 
 
-    fig['data'][trace_ids['nosex']]['x']=frames_axis#[::1000]
-    fig['data'][trace_ids['nosex']]['y']=nose_x#[::1000]
+    fig['data'][trace_ids['nosex']]['x']=frames_axis
+    fig['data'][trace_ids['nosex']]['y']=nose_x
     fig['data'][trace_ids['nosex']]['name']='Nose X'
     
-    fig['data'][trace_ids['nosey']]['x']=frames_axis#[::1000]
-    fig['data'][trace_ids['nosey']]['y']=nose_y#[::1000]
+    fig['data'][trace_ids['nosey']]['x']=frames_axis
+    fig['data'][trace_ids['nosey']]['y']=nose_y
     fig['data'][trace_ids['nosey']]['name']='Nose Y'
 
     #vertical line representing where we are on the video    
@@ -341,28 +325,23 @@ def create_traces_annot(subj_path,fps,video_duration,model=None,threshold=0.5,re
             event_timeseries_lst.append(event_timeseries)
 
     for event,event_ts in zip(graph_data['events'].keys(),event_timeseries_lst):
-        fig['data'][trace_ids[event]]['x']=frames_axis#[::1000]
-        fig['data'][trace_ids[event]]['y']=event_ts#[::1000]
+        fig['data'][trace_ids[event]]['x']=frames_axis
+        fig['data'][trace_ids[event]]['y']=event_ts
         fig['data'][trace_ids[event]]['name']=event
 
     if not model is None:
         dataset = pd.DataFrame([elem for elem in zip(frames_axis,gazex,gazey,yaw,pitch,roll,nose_x,nose_y)],
                             columns=['frame','gazex','gazey','yaw','pitch','roll','nosex','nosey'])
-        print(dataset.head())
         model.load_dataset(dataset)
         frame_pred,pred=model.predict()
-        print(len(frame_pred),len(pred))
-        print(pred[2000:2010])
+
         pred_timeseries=np.empty(Nframes)
         pred_timeseries[:]=np.NaN
         pred_timeseries[frame_pred]=pred
         pred_timeseries=medfilt(pred_timeseries,MEDIAN_FILTERING_LENGTH)
         label_timeseries=(pred_timeseries>threshold).astype(int) #edit this
         
-        # reject events
-        #if len(reject_events)>0:
-        #    for reject_start,reject_end in reject_events:
-        #        label_timeseries[np.logical_and(frames_axis>=reject_start,frames_axis<reject_end)]=0
+
         fig['data'][trace_ids['ml']]['x']=frames_axis
         fig['data'][trace_ids['ml']]['y']=pred_timeseries
         fig['data'][trace_ids['ml']]['name']='predictions'
@@ -373,7 +352,6 @@ def create_traces_annot(subj_path,fps,video_duration,model=None,threshold=0.5,re
     
     fig['layout']['uirevision']=1
 
-    print ('Graph-data children end')
     return pa.serialize(fig).to_buffer()
 
 def get_frame_from_video(videofile,frameNum,filename):
@@ -404,7 +382,7 @@ def get_frame_from_video(videofile,frameNum,filename):
 @cache.memoize()
 def load_data(subj_path,fps,video_duration):
     timeseries = Data(subj_path,events)
-    print(timeseries)
+
     return timeseries.serialize()
 
 

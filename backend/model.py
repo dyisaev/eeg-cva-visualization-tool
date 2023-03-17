@@ -30,7 +30,6 @@ def balanced_prevalence_sampling(model,x,frames,num=256,prevalence_threshold=0.5
 
 class Model:
     def __init__(self,model_filename,preprocess_filename=None) -> None:
-        print('model_filename:', model_filename)
         self.model = torch.load(model_filename)
         self.model = self.model.to(device)
         self.preprocess_filename=preprocess_filename
@@ -40,10 +39,9 @@ class Model:
         self.active_learning_labeled_frames=[]
         self.active_learning_labels=[]
         self.optim = torch.optim.Adam(self.model.parameters())
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=10, gamma=0.8)#ExponentialLR(transfer_optim,gamma=0.99)#StepLR(transfer_optim, step_size=10, gamma=0.8) ## #CosineAnnealingLR(transfer_optim,T_max=10,eta_min=transfer_optim.param_groups[0]["lr"]*0.05) 
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optim, step_size=10, gamma=0.8)
         self.n_training_epochs=20
         self.criterion=torch.nn.CrossEntropyLoss()
-        print('preproc_params',self.preprocess_params)
 
     def preprocess(self,df,infer=True): 
         feat_list=['frame', 'gazex', 'gazey','yaw', 'pitch', 'roll','nosex', 'nosey'] 
@@ -58,7 +56,6 @@ class Model:
             roll_median=df_ml['roll'].median()
             nosex_median=df_ml['nosex'].median()
             nosey_median=df_ml['nosey'].median()
-        print(nosey_median)
         df_ml['gazex_plus']=np.maximum(np.repeat(0,df_ml.shape[0]),df_ml['gazex']-gazex_median)
         df_ml['gazex_minus']=np.maximum(np.repeat(0,df_ml.shape[0]),-df_ml['gazex']+gazex_median)
 
@@ -98,12 +95,11 @@ class Model:
         return
     def predict(self):
         frames,data=self.preprocess(self.dataset,infer=True)
-        x=torch.FloatTensor(data)   #.to(device)
+        x=torch.FloatTensor(data)  
         pred=torch.squeeze( F.softmax(self.model(x.to(device)),dim=1))
         return frames['frame'].to_numpy(),pred.detach().cpu().numpy()[:,1]
     def train(self):
-        print('labeled frames: ', self.active_learning_labeled_frames)
-        print('labels: ',self.active_learning_labels)
+
         frames,data=self.preprocess(self.dataset,infer=True)
         frames_filtered = frames[frames['frame'].isin(self.active_learning_labeled_frames)]
         data_filtered = data[frames['frame'].isin(self.active_learning_labeled_frames)]
@@ -112,10 +108,10 @@ class Model:
         y=torch.Tensor(y.astype(int)).to(device)
         for epoch in range (self.n_training_epochs):
             outputs = self.model(x)
-            loss = self.criterion(torch.squeeze(outputs), y) # [200,1] -squeeze-> [200]
-            self.optim.zero_grad() # Setting our stored gradients equal to zero
-            loss.backward() # Computes the gradient of the given tensor w.r.t. graph leaves 
-            self.optim.step() # Updates weights and biases with the optimizer (SGD)
+            loss = self.criterion(torch.squeeze(outputs), y) 
+            self.optim.zero_grad() 
+            loss.backward() 
+            self.optim.step()
             print(f'epoch {epoch} loss {loss}')
         self.scheduler.step()
     def sample(self,data,frames,num):
@@ -124,12 +120,12 @@ class Model:
         return balanced_prevalence_sampling(self.model,x,frames,num,prevalence_threshold=PREVALENCE_THRESHOLD)
     def generate_al_batch(self,batch_size):
         frames,data=self.preprocess(self.dataset,infer=True)
-        print(frames.shape)
-        print(self.active_learning_labeled_frames)
+
+
         frames_filtered = frames[~frames['frame'].isin(self.active_learning_labeled_frames)]
-        print(frames_filtered.shape)
+
         data_filtered = data[~frames['frame'].isin(self.active_learning_labeled_frames)]
-        print(data_filtered.shape)
+
         self.frames_to_label = self.sample (data_filtered,frames_filtered,batch_size)
         return self.frames_to_label
     def label(self, labeled_frames):
