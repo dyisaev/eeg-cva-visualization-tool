@@ -60,8 +60,7 @@ def generate_layout(events):
     common_signal_fig,trace_ids=generate_signals_figure(events)
 
     layout = html.Div(children=[
-        html.H1(children='Video Visualization'),
-
+        html.H1(children=''),
         html.Div(
             className='main_container',
             children=[
